@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
+    <_name>Circle Beta</_name>
+    <id>org.ekips.filter.circle_beta</id>
+    <dependency type="executable" location="extensions">circle_beta.py</dependency>
+    <dependency type="executable" location="extensions">inkex.py</dependency>
+    <dependency type="executable" location="extensions">simplestyle.py</dependency>
+    <dependency type="executable" location="extensions">DomeSegment.py</dependency>
+    <dependency type="executable" location="extensions">vector2.py</dependency>
+    <dependency type="executable" location="extensions">SVGDraw.py</dependency>    
+    <param name="tab" type="notebook">
+    	<page name="common" _gui-text="Settings">
+    		<param name="radius" type="float" min="1" max="50" _gui-text="Circle radius (cm)">10.0</param>
+    		<param name="segments" type="int" min="1" max="20" _gui-text="Number of Segments">4</param>
+    		<param name="seams" type="int" min="1" max="10" _gui-text="Number of seams per segments">1</param>
+    		<param name="showSegData" type="boolean" _gui-text="Show segments data table?">0</param>
+    		<param name="showSegLabel" type="boolean" _gui-text="Show segments labels?">1</param>
+    	</page>
+    	<page name="zipper" _gui-text="Zip Part">
+    		<param name="zipperTop" type="float" min="0.1" max="50" _gui-text="Upper zip piece width (cm)">1.0</param>
+    		<param name="zipperBottom" type="float" min="0.1" max="50" _gui-text="Bottom zip piece width (cm)">1.0</param>
+    		<param name="zipperStrapJoin" type="float" min="0.1" max="50" _gui-text="Zip/Strap joiner (cm)">1.0</param>
+    		<param name="zipperHeight" type="float" min="0.1" max="50" _gui-text="Hight of the zipper channel (cm)">1.0</param>
+    	</page>
+    	<page name="seams" _gui-text="Seams">
+				<param name="addSeamAllowence" type="boolean" _gui-text="Add seam allowence?">0</param>
+				<param name="seamAllowenceInner" type="float" min="0.0" max="10.0" _gui-text="Seam allowence for inner radius (cm)">1.0</param>
+				<param name="seamAllowenceEnd" type="float" min="0.0" max="10.0" _gui-text="Seam allowence for the ends of each segment (cm)">1.0</param>
+				<param name="seamAllowenceOuter" type="float" min="0.0" max="10.0" _gui-text="Seam allowence for onter radius (cm)">1.0</param>
+				<param name="seamAllowenceOther" type="float" min="0.0" max="10.0" _gui-text="Seam allowence for zipper pieces">1.0</param>   	
+    	</page>
+			<page name="render" _gui-text="Render">
+    		<param name="topCone" type="boolean" _gui-text="Render the top cone as a circle">0</param>
+				<param name="onlyRender" type="boolean" _gui-text="Render only some segemnts">0</param>
+				<param name="renderSegmentsFrom" type="int" min="1" max="20" _gui-text="Render segments from:">1</param>
+				<param name="renderSegmentsTo" type="int" min="1" max="20" _gui-text="Render segments to:">1</param>		
+			</page>
+    </param>
+    <effect>
+			<object-type>all</object-type>
+      <effects-menu>
+      	<submenu _name="Examples"/>
+      </effects-menu>	
+    </effect>
+    <script>
+        <command reldir="extensions" interpreter="python">circle_beta.py</command>
+    </script>
+</inkscape-extension>
