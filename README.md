@@ -18,5 +18,9 @@ of a bag called 'Ananabag'.
 
 ## Limitations
 
+## Issues
+
+The pattern generator is not rendering correctly at present. It only draws the
+dome pieces, and not the body and zipper parts.
 
 ## License
