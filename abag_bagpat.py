@@ -2,20 +2,20 @@
 
 # These two lines are only needed if you don't put the script directly into
 # the installation directory
-import sys
-sys.path.append('/usr/share/inkscape/extensions') #path to extensions
+try:
+    import inkex
+except ImportError as e:
+    import sys
+    sys.path.append('/usr/share/inkscape/extensions')
+    import inkex
 
 # The simplestyle module provides functions for style parsing.
-import inkex
 import re
-import SVGDraw
 from simplestyle import *
 from math import radians, pi, cos, sin
 from random import randint
 from types import *
-
-from DomeSegment import DomeSegment
-from RectanglePiece import RectanglePiece
+import abag_utils as utils
 
 class DomePattern(inkex.Effect):
     """
@@ -132,7 +132,7 @@ class DomePattern(inkex.Effect):
     def writeSegLabel(self, segment, node, count):
         r, s, e = segment.get_text_arch()
         ID = "mypath" + str(count) + str(randint(1,50000))
-        ep = SVGDraw.ellipseId((r, r), self.view_center, node, ID, (s, e))
+        ep = utils.ellipseId((r, r), self.view_center, node, ID, (s, e))
         # Create text element
         attr = {'style': formatStyle({'text-align':'right', 'font-size':str(int(segment.thickness / 8))})}
         text = inkex.etree.Element(inkex.addNS('text','svg'), attr)
@@ -253,7 +253,7 @@ class DomePattern(inkex.Effect):
             w, h = val['d']
             x1, y1 = (200, 200)
             
-            rect = RectanglePiece(inkex.unittouu(str(w) + 'cm'),
+            rect = utils.RectanglePiece(inkex.unittouu(str(w) + 'cm'),
                                     inkex.unittouu(str(h) + 'cm'),
                                     val['label'],
                                     regex.sub("\g<1> \g<2>", key))
@@ -295,14 +295,14 @@ class DomePattern(inkex.Effect):
                 # adjust top cone to be a flat circle using pixel units
                 c = radius_px * angle
                 nr = c / (2*pi)
-                segment = DomeSegment(i, 2*pi, nr, thickness_px)
+                segment = utils.DomeSegment(i, 2*pi, nr, thickness_px)
                 # adjustment for top cone using cm units
                 c = radius_cm * angle
                 nr = c / (2*pi)
-                segment_cm = DomeSegment(i, 2*pi, nr, thickness_px)
+                segment_cm = utils.DomeSegment(i, 2*pi, nr, thickness_px)
             else:
-                segment = DomeSegment(i, angle, radius_px, thickness_px)
-                segment_cm = DomeSegment(i, angle, radius_cm, thickness)
+                segment = utils.DomeSegment(i, angle, radius_px, thickness_px)
+                segment_cm = utils.DomeSegment(i, angle, radius_cm, thickness)
             segment.setPageCenter(cx, cy)
 
             self.addInfoLines(
@@ -314,20 +314,21 @@ class DomePattern(inkex.Effect):
 
             # always draw the outer curve
             r, s, e = segment.get_outer_arch()
-            SVGDraw.ellipse((r, r), (cx, cy), grp, line_style, (s, e))
+            utils.ellipse((r, r), (cx, cy), grp, line_style, (s, e))
 
             if i != 1:
                 # draw the inner curve only if we not in the first cone
                 r, s, e = segment.get_inner_arch()
-                SVGDraw.ellipse((r, r), (cx, cy), grp, line_style, (s, e))
+                # FIXME should be using ellipseId() and use i as ID
+                utils.ellipse((r, r), (cx, cy), grp, line_style, (s, e))
             if not topCone:
                 # draw the start line between the two curves
                 p1, p2 = segment.get_start_cap()
-                SVGDraw.line(p1, p2, "line", grp, line_style)
+                utils.line(p1, p2, "line", grp, line_style)
 
                 # draw the end line between the two curves
                 p1, p2 = segment.get_end_cap()
-                SVGDraw.line(p1, p2, "line", grp, line_style)
+                utils.line(p1, p2, "line", grp, line_style)
 
             # add seams if required
             if so.addSeams:
@@ -336,12 +337,12 @@ class DomePattern(inkex.Effect):
 
                 # always add outer seam
                 r, s, e = segment.get_outer_seam_arch()
-                SVGDraw.ellipse((r, r), (cx, cy), grp, line_style, (s, e))
+                utils.ellipse((r, r), (cx, cy), grp, line_style, (s, e))
 
                 if not topCone:
                     # add inner seam
                     r, s, e = segment.get_inner_seam_arch()
-                    SVGDraw.ellipse((r, r), (cx, cy), grp, line_style, (s, e))
+                    utils.ellipse((r, r), (cx, cy), grp, line_style, (s, e))
 
                     # add start cap seam
                     path = segment.get_start_seam_cap()
