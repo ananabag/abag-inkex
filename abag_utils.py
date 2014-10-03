@@ -451,20 +451,49 @@ class Vector2(object):
         dx = xx-x
         dy = yy-y
         return math.sqrt( dx*dx + dy*dy )
+
+class Path(object):
+    """SVG path class"""
+
+    __slots__ = ('_d',)
+
+    def __init__(self):
+        pass
+        
+    def moveTo(self):
+        pass
+        
+    def absMoveTo(self):
+        pass
+        
+    def get_path_array(self):
+        return this._d
+
+
+class Piece(object):
+    """
+    Base class for all pattern pieces
+    """
+
+    def __init__(self, label = '', name = ''):
+        self.label = label
+        self.name = name
+        self.seams = False
+        
+        self._seams = self.seams
+        self._d = Path()
         
 
-class RectanglePiece(object):
+class RectanglePiece(Piece):
     """
     The RectanglePiece class. The main aim of this class is to make drawing and 
     rendering svg rectangles easy
     """
     def __init__(self, width, height, label = '', name = ''):
+        Piece.__init__(self, label, name)
         self.width = width
         self.height = height
         self.start_loc = (0,0)
-        self.label = label
-        self.name = name
-        self.seams = False
         
         # set the path data
         self.path_data = ((self.width, 0.0),

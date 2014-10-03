@@ -2,20 +2,32 @@
 
 # These two lines are only needed if you don't put the script directly into
 # the installation directory
+import sys
 try:
     import inkex
 except ImportError as e:
-    import sys
+    #import sys
     sys.path.append('/usr/share/inkscape/extensions')
     import inkex
 
 # The simplestyle module provides functions for style parsing.
 import re
-from simplestyle import *
+from simplestyle import formatStyle
+from simplepath import parsePath
 from math import radians, pi, cos, sin
 from random import randint
 from types import *
-import abag_utils as utils
+from abag_utils import line, ellipse, ellipseId, DomeSegment, RectanglePiece
+
+
+# make aliases
+SubElement = inkex.etree.SubElement
+
+#BASE_TEXT_STYLES = {
+#    'text-align':'right',
+#    'font-size':'12px',
+#    'font-weight': 'normal'
+#}
 
 class DomePattern(inkex.Effect):
     """
@@ -28,124 +40,111 @@ class DomePattern(inkex.Effect):
         """
         inkex.Effect.__init__(self)
 
-        self.OptionParser.add_option("--tab",
-            action="store", type="string",
+        self._lines = []
+
+        self.OptionParser.add_option("--tab", action="store", type="string",
             dest="tab", default="object")
-
-        # common options
-        self.OptionParser.add_option("--radius", action="store",
-            type="float", dest="radius", default="10.0",
-            help="What is the Radius")
-        self.OptionParser.add_option("--segments", action="store",
-            type="int", dest="segments", default="4",
-            help="How many semgents to make the dome shape from")
-        self.OptionParser.add_option("--seams", action="store",
-            type="int", dest="seams", default="1",
-            help="How many seams per segment")
-        self.OptionParser.add_option("--showSegData", action="store",
-            type="inkbool", dest="showSegData", default="false",
-            help="Show segments data table?")
-        self.OptionParser.add_option("--showSegLabel", action="store",
-            type="inkbool", dest="showSegLabel", default="true",
-            help="Show segments labels?")
-
-        # zipper options
-        self.OptionParser.add_option("--zipperTop", action="store",
-            type="float", dest="zipperTop", default="1.0",
-            help="Width of piece above zipper")
-        self.OptionParser.add_option("--zipperBottom", action="store",
-            type="float", dest="zipperBottom", default="1.0",
-            help="Width of piece under the zipper")
-        self.OptionParser.add_option("--zipperStrapJoin", action="store",
-            type="float", dest="zipperStrapJoin", default="1.0",
-            help="Width of the join, must be greater than the webbing")
-        self.OptionParser.add_option("--zipperHeight", action="store",
-            type="float", dest="zipperHeight", default="1.0",
-            help="Height of the zipper")
-
-        # seam allowence options
-        self.OptionParser.add_option("--addSeamAllowence", action="store",
-            type="inkbool", dest="addSeams", default="false",
-            help="Add seams allowence in?")
-        self.OptionParser.add_option("--seamAllowenceInner", action="store",
-          type="float", dest="seamInner", default="0.0",
-          help="Seam allowence for the inner seam")
-        self.OptionParser.add_option("--seamAllowenceEnd", action="store",
-          type="float", dest="seamEnd", default="0.0",
-          help="Seam allowence for the ends of each segment")
-        self.OptionParser.add_option("--seamAllowenceOuter", action="store",
-          type="float", dest="seamOuter", default="0.0",
-          help="Seam allowence for the outer seam")
-        self.OptionParser.add_option("--seamAllowenceOther", action="store",
-          type="float", dest="seamOther", default="0.0",
-          help="Seam allowence for the other seams")
-
-        # render options
-        self.OptionParser.add_option("--topCone", action="store",
-            type="inkbool", dest="topCone", default="false",
-            help="Render the top cone as a circle?")
-        self.OptionParser.add_option("--onlyRender", action="store",
-            type="inkbool", dest="onlyRender", default="false",
-            help="Render only some segments?")
-        self.OptionParser.add_option("--renderSegmentsFrom", action="store",
-            type="int", dest="rendSegsFrom", default="20",
-            help="Render segments from:")
-        self.OptionParser.add_option("--renderSegmentsTo", action="store",
-            type="int", dest="rendSegsTo", default="20",
-            help="Render segments to:")
             
-        self.lines = ()
+        options = (
+            # Common options
+            ("--radius", "store", "float", "radius", "10.0", "What is the radius"),
+            ("--segments", "store", "int", "segments", "4", "How many segments to make the dome"),
+            ("--seams", "store", "int", "seams", "1", "How many seams per segment"),
+            ("--showSegData", "store", "inkbool", "showSegData", "false", "Show segment data table?"),
+            ("--showSegLabel", "store", "inkbool", "showSegLabel", "true", "SHow segment labels?"),
+            # Zipper options
+            ("--zipperTop", "store", "float", "zipperTop", "1.0", "Width of piece above zipper"),
+            ("--zipperBottom", "store", "float", "zipperBottom", "1.0", "Width of piece under the zipper"),
+            ("--zipperStrapJoin", "store", "float", "zipperStrapJoin", "1.0", "Width of the join, must be greater than the webbing"),
+            ("--zipperHeight", "store", "float", "zipperHeight", "1.0", "Height of the zipper"),
+            # Seam options
+            ("--addSeamAllowence", "store", "inkbool", "addSeams", "false", "Add seams allowence in?"),
+            ("--seamAllowenceInner", "store", "float", "seamInner", "0.0", "Seam allowence for the inner seam"),
+            ("--seamAllowenceEnd", "store", "float", "seamEnd", "0.0", "Seam allowence for the ends of each segment"),
+            ("--seamAllowenceOuter", "store", "float", "seamOuter", "0.0", "Seam allowence for the outer seam"),
+            ("--seamAllowenceOther", "store", "float", "seamOther", "0.0", "Seam allowence for the other seams"),
+            # Rendering options
+            ("--topCone", "store", "inkbool", "topCone", "false", "Render the top cone as a circle?"),
+            ("--onlyRender", "store", "inkbool", "onlyRender", "false", "Render only some segments?"),
+            ("--renderSegmentsFrom", "store", "int", "rendSegsFrom", "20", "Render segments from:"),
+            ("--renderSegmentsTo", "store", "int", "rendSegsTo", "20", "Render segments to:")
+        )
+        
+        for oLongName, oAction, oType, oDest, oDefault, oHelp in options:
+            self.OptionParser.add_option(oLongName, action="store", type=oType,
+                    dest=oDest, default=oDefault, help=oHelp)
 
     def addText(self,node,x,y,text):
-        s = {'font-size': '12px', 'fill-opacity': '1.0', 'stroke': 'none',
-            'font-weight': 'normal', 'font-style': 'normal', 'fill': '#000'}       
-        new = inkex.etree.SubElement(node,inkex.addNS('text','svg'))
-        new.set('style', formatStyle(s))
-        new.set('x', str(x))
-        new.set('y', str(y))
-        new.text = text
+        style = {'font-size': '12px',
+                'fill-opacity': '1.0',
+                'stroke': 'none',
+                'font-weight': 'normal',
+                'font-style': 'normal',
+                'fill': '#000'}
+        elem = SubElement(node, inkex.addNS('text','svg'))
+        elem.set('style', formatStyle(style))
+        elem.set('x', str(x))
+        elem.set('y', str(y))
+        elem.text = text
         
     def addInfoLines(self, lines):
         if type(lines) is TupleType:
-            self.lines += lines
+            self._lines.extend(lines)
         else:
             raise TypeError('$lines must be tuple')
  
     def writeInfoLines(self):
-        node = inkex.etree.SubElement(
-                    self.current_layer,
-                    inkex.addNS('text','svg'),
-                    {'style': formatStyle({'text-align': 'left', 'font-size': '12px'})}
+        style = {
+            'font-size':'12px',
+            'font-weight': 'normal'
+        }
+        fmtStyle = formatStyle(style)
+        node = SubElement(self.current_layer, inkex.addNS('text','svg'),
+            {'style': fmtStyle}
         )
-        line_style = {'text-align':'right', 'font-size':'12px', 'font-weight': 'normal'}
-        head_style = {'text-align':'right', 'font-size':'16px', 'font-weight': 'bold'}
 
-        line_attr = {'style': formatStyle(line_style), inkex.addNS('role','sodipodi'):'line'}
-        head_attr = {'style': formatStyle(head_style), inkex.addNS('role','sodipodi'):'line'}
-        
-        for i in self.lines:
-            if i.startswith('$'):
-                inkex.etree.SubElement(node, inkex.addNS('tspan','svg'), head_attr).text = i.lstrip('$')
+        lineAttr = {
+            'style': fmtStyle,
+            inkex.addNS('role','sodipodi'):'line'
+        }
+
+        style['font-size'] = '16px'
+        style['font-weight'] = 'bold'
+
+        headAttr = {
+            'style': formatStyle(style),
+            inkex.addNS('role','sodipodi'):'line'
+        }
+
+        for line in self._lines:
+            if line.startswith('$'):
+                attr = headAttr
+                line = line.lstrip('$')
             else:
-                inkex.etree.SubElement(node, inkex.addNS('tspan','svg'), line_attr).text = i
+                attr = lineAttr
+            SubElement(node, inkex.addNS('tspan','svg'), attr).text = line
     
     def writeSegLabel(self, segment, node, count):
         r, s, e = segment.get_text_arch()
         ID = "mypath" + str(count) + str(randint(1,50000))
-        ep = utils.ellipseId((r, r), self.view_center, node, ID, (s, e))
+        ep = ellipseId((r, r), self.view_center, node, ID, (s, e))
         # Create text element
-        attr = {'style': formatStyle({'text-align':'right', 'font-size':str(int(segment.thickness / 8))})}
+        attr = {
+            'style': formatStyle({'font-size':str(int(segment.thickness/8))})
+        }
         text = inkex.etree.Element(inkex.addNS('text','svg'), attr)
-        textpath = inkex.etree.SubElement(text, inkex.addNS('textPath', 'svg'))
-        textpath.set(inkex.addNS('href', 'xlink'), "#"+ID)
-        textpath.set('startOffset', str(25/self.options.segments)+"%")
-        textpath.text = "S%i, for dome of radius %.1fcm" % (count, self.options.radius)
+        textPath = SubElement(text, inkex.addNS('textPath', 'svg'))
+        textPath.set(inkex.addNS('href', 'xlink'), "#"+ID)
+        textPath.set('startOffset', str(25/self.options.segments)+"%")
+        textPath.text = "S%i, for dome of radius %.1fcm" % (count, self.options.radius)
         # append it to the main group
         node.append(text)
+        
+    writeSegmentLabel = writeSegLabel
 
     @staticmethod
     def addTspan(node, text, style):
-        inkex.etree.SubElement(node, inkex.addNS('tspan','svg'), style).text = text
+        SubElement(node, inkex.addNS('tspan','svg'), style).text = text
     
     @staticmethod
     def getSegmentData(radius, segments):
@@ -187,10 +186,25 @@ class DomePattern(inkex.Effect):
         """
         cir = 2*pi*radius
         zipLength = cir - joinWidth
-        return {'BodyStrip' : {'d': (cir, thickness), 'label': 'B1'},
-                'ZipTop'    : {'d': (zipLength, topHeight), 'label': 'Z1'},
-                'ZipBottom' : {'d': (zipLength, bottomHeight), 'label': 'Z2'},
-                'ZipJoin'   : {'d': (joinWidth, topHeight + zipHeight + bottomHeight), 'label': 'Z3'}}
+        data = {
+            'BodyStrip' : {
+                'd': (cir, thickness),
+                'label': 'B1'
+            },
+            'ZipTop'    : {
+                'd': (zipLength, topHeight),
+                'label': 'Z1'
+            },
+            'ZipBottom' : {
+                'd': (zipLength, bottomHeight),
+                'label': 'Z2'
+            },
+            'ZipJoin'   : {
+                'd': (joinWidth, topHeight + zipHeight + bottomHeight),
+                'label': 'Z3'
+            }
+        }
+        return data
     
     def effect(self):
     
@@ -200,6 +214,7 @@ class DomePattern(inkex.Effect):
         """
         # a short hand
         so = self.options
+        o = self.options
         
         seamInner = so.seamInner
         seamOuter = so.seamOuter
@@ -208,101 +223,126 @@ class DomePattern(inkex.Effect):
 
         cx, cy = self.view_center
         centre = self.view_center   # Put in in the centre of the current view
-        data_dict, thickness = self.getSegmentData(so.radius, so.segments)
+        data_dict, thickness = self.getSegmentData(o.radius, o.segments)
+        segData = data_dict
 
         # change radius(cm) into pixels
-        r_px = inkex.unittouu(str(so.radius)+'cm')
-        thickness_px = inkex.unittouu(str(thickness) + "cm")
+        r_px = inkex.unittouu(str(o.radius)+'cm')
+        radiusPx = r_px
+        thicknessPx = inkex.unittouu(str(thickness) + "cm")
 
         # change seams from cm to pixels
-        seamInner = inkex.unittouu(str(so.seamInner) + "cm")
-        seamOuter = inkex.unittouu(str(so.seamOuter) + "cm")
-        seamEnd = inkex.unittouu(str(so.seamEnd) + "cm")
+        seamInner = inkex.unittouu(str(o.seamInner) + "cm")
+        seamOuter = inkex.unittouu(str(o.seamOuter) + "cm")
+        seamEnd = inkex.unittouu(str(o.seamEnd) + "cm")
 
         # setup stderr so that we can print to it for debugging
         #saveout = sys.stdout
         #sys.stdout = sys.stderr
+        # use inkex.errormsg('something')
 
         # line styles and node attributes
-        line_style = {'stroke': '#000000', 'stroke-width': '0.5px', 'fill': 'none'}
-        attr = {'style': formatStyle(line_style)}
+        line_style = {
+            'stroke': '#000000',
+            'stroke-width': '0.5px',
+            'fill': 'none'
+        }
+
+        lineStyle = line_style
+        defaultStyle = lineStyle
+        attr = {'style': formatStyle(lineStyle)}
+        defaultAttr = attr
 
         self.addInfoLines(
             ("$Pattern Info",
-            "Total segments: %i" % so.segments,
-            "Radius of dome: %.1fcm" % (so.radius),
+            "Total segments: %i" % o.segments,
+            "Radius of dome: %.1fcm" % (o.radius),
             "Segment thickness: %.3fcm" % (thickness),
             "rendering line thickness: %.3f" % (inkex.uutounit(0.5, 'cm')),
             " ")
         )
-        if so.addSeams:
+        
+        if o.addSeams:
             self.addInfoLines(
                 ("$Seam Allowences",
-                "inner seam: %.1fcm" % (so.seamInner),
-                "Outer seam: %.1fcm" % (so.seamOuter),
-                "End seam: %.1fcm" % (so.seamEnd),
-                "Other seams: %.1fcm" % (so.seamOther),
+                "inner seam: %.1fcm" % (o.seamInner),
+                "Outer seam: %.1fcm" % (o.seamOuter),
+                "End seam: %.1fcm" % (o.seamEnd),
+                "Other seams: %.1fcm" % (o.seamOther),
                 " ")
             )        
         # zipper and body strip
-        zip_data = self.getZipperData(so.radius, thickness,
-                                    so.zipperStrapJoin, so.zipperHeight,
-                                    so.zipperTop, so.zipperBottom)
+        zip_data = self.getZipperData(o.radius, thickness,
+                                    o.zipperStrapJoin, o.zipperHeight,
+                                    o.zipperTop, o.zipperBottom)
         regex = re.compile("([a-z])([A-Z])")
         for key, val in zip_data.iteritems():
             w, h = val['d']
             x1, y1 = (200, 200)
             
-            rect = utils.RectanglePiece(inkex.unittouu(str(w) + 'cm'),
+            rect = RectanglePiece(inkex.unittouu(str(w) + 'cm'),
                                     inkex.unittouu(str(h) + 'cm'),
                                     val['label'],
                                     regex.sub("\g<1> \g<2>", key))
             rect.start_loc = (x1, y1)
-            if so.addSeams:
+                
+            grp = SubElement(self.current_layer, 'g',
+                {inkex.addNS('label', 'inkscape'): key})
+                        
+            #print(rect.get_svgd())
+            #print('just here yo')
+            attr['d'] = rect.get_svgd()
+            SubElement(grp, inkex.addNS('path', 'svg'), attr)
+            
+            inkex.errormsg(parsePath(attr['d']))
+            
+            if o.addSeams:
                 rect.set_all_seams(inkex.unittouu(str(so.seamOther) + 'cm'))
+
                 if rect.label == 'Z1':
                     rect.bottom = 0
                 elif rect.label == 'Z2':
                     rect.top = 0
-                
-            tgrp = inkex.etree.SubElement(self.current_layer, 'g',
-                        {inkex.addNS('label', 'inkscape'):key})
-                
-            for i in rect.get_all_svgd():
-                attr['d'] = i
-                inkex.etree.SubElement(tgrp, inkex.addNS('path', 'svg'), attr)
+
+                attr['d'] = rect.get_seams_svgd()
+                SubElement(grp, inkex.addNS('path', 'svg'), attr)
+
             # add labels to rendered piece
-            self.addText(tgrp, 212, y1 + (rect.height/4), "%s (%s)" % (rect.name, rect.label))
+            self.addText(grp, 212, y1 + (rect.height/4), "%s (%s)" % (rect.name, rect.label))
             self.addInfoLines(
                 ("$" + rect.name + " (" + rect.label + ")",
                 "Width: %.3fcm" % (w),
                 "Height: %.3fcm" % (h))
             )
+            
+#        return
 
         # loop through the data_dict making each segment in turn using the data
         for i in range(1, len(data_dict)+1):
             # create a group to put this pattern in
-            grp_attribs = {inkex.addNS('label','inkscape'): "Segment " + str(i)}
-            grp = inkex.etree.SubElement(self.current_layer, 'g', grp_attribs)
-
+#            grp_attribs = 
+#            grpAttr = {inkex.addNS('label','inkscape'): "Segment " + str(i)}
+            grp = SubElement(self.current_layer, 'g',
+                        {inkex.addNS('label','inkscape'): "Segment " + str(i)})
             #get the data we need from the dictionary
-            angle, radius_cm = data_dict[i]
-            angle = angle/so.seams
-            radius_px = inkex.unittouu(str(radius_cm) + "cm")
+            angle, radiusCm = data_dict[i]
+            angle = angle / o.seams
+            radiusPx = inkex.unittouu(str(radiusCm) + "cm")
 
             # get segment object
             if topCone and i == 1:
                 # adjust top cone to be a flat circle using pixel units
-                c = radius_px * angle
-                nr = c / (2*pi)
-                segment = utils.DomeSegment(i, 2*pi, nr, thickness_px)
+                c = radiusPx * angle
+                nr = c / (2 * pi)
+                segment = DomeSegment(i, 2*pi, nr, thicknessPx)
                 # adjustment for top cone using cm units
-                c = radius_cm * angle
+                c = radiusCm * angle
                 nr = c / (2*pi)
-                segment_cm = utils.DomeSegment(i, 2*pi, nr, thickness_px)
+                segment_cm = DomeSegment(i, 2*pi, nr, thicknessPx)
             else:
-                segment = utils.DomeSegment(i, angle, radius_px, thickness_px)
-                segment_cm = utils.DomeSegment(i, angle, radius_cm, thickness)
+                segment = DomeSegment(i, angle, radiusPx, thicknessPx)
+                segment_cm = DomeSegment(i, angle, radiusCm, thickness)
+
             segment.setPageCenter(cx, cy)
 
             self.addInfoLines(
@@ -313,45 +353,45 @@ class DomePattern(inkex.Effect):
             )
 
             # always draw the outer curve
-            r, s, e = segment.get_outer_arch()
-            utils.ellipse((r, r), (cx, cy), grp, line_style, (s, e))
+            radius, start, end = segment.get_outer_arch()
+            ellipse((radius, radius), (cx, cy), grp, lineStyle, (start, end))
 
             if i != 1:
                 # draw the inner curve only if we not in the first cone
-                r, s, e = segment.get_inner_arch()
-                # FIXME should be using ellipseId() and use i as ID
-                utils.ellipse((r, r), (cx, cy), grp, line_style, (s, e))
+                radius, start, end = segment.get_inner_arch()
+                ellipse((radius, radius), (cx, cy), grp, lineStyle, (start, end))
+
             if not topCone:
                 # draw the start line between the two curves
                 p1, p2 = segment.get_start_cap()
-                utils.line(p1, p2, "line", grp, line_style)
+                line(p1, p2, "line", grp, lineStyle)
 
                 # draw the end line between the two curves
                 p1, p2 = segment.get_end_cap()
-                utils.line(p1, p2, "line", grp, line_style)
+                line(p1, p2, "line", grp, lineStyle)
 
             # add seams if required
-            if so.addSeams:
+            if o.addSeams:
                 # set all the seams
                 segment.set_all_seams(seamInner, seamOuter, seamEnd)
 
                 # always add outer seam
-                r, s, e = segment.get_outer_seam_arch()
-                utils.ellipse((r, r), (cx, cy), grp, line_style, (s, e))
+                radius, start, end = segment.get_outer_seam_arch()
+                ellipse((radius, radius), (cx, cy), grp, lineStyle, (start, end))
 
                 if not topCone:
                     # add inner seam
-                    r, s, e = segment.get_inner_seam_arch()
-                    utils.ellipse((r, r), (cx, cy), grp, line_style, (s, e))
+                    radius, start, end = segment.get_inner_seam_arch()
+                    ellipse((radius, radius), (cx, cy), grp, lineStyle, (start, end))
 
                     # add start cap seam
-                    path = segment.get_start_seam_cap()
-                    attribs = {'style': formatStyle(line_style), 'd': path}
-                    inkex.etree.SubElement(grp, inkex.addNS('path', 'svg'), attribs)
+                    attrs = {'style': formatStyle(lineStyle)}
+                    attrs['d'] = segment.get_start_seam_cap()
+                    SubElement(grp, inkex.addNS('path', 'svg'), attrs)
 
                     # add end cap seam
-                    attribs['d'] = segment.get_end_seam_cap()
-                    inkex.etree.SubElement(grp, inkex.addNS('path', 'svg'), attribs)
+                    attrs['d'] = segment.get_end_seam_cap()
+                    SubElement(grp, inkex.addNS('path', 'svg'), attrs)
 
             # must switch this back to false after the first interation
             # so that other segments will have the thickness connectors
