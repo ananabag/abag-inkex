@@ -1,11 +1,23 @@
 #!/usr/bin/env python
+"""
+abag_domepat.py
+The original Ananabag dome template generator Inkscape extensions
+Copyright (C) 2014 Samuel Hodges <octerman@gmail.com>
 
-# These two lines are only needed if you don't put the script directly into
-# the installation directory
+This program is free software: you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the
+Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+ 
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+See the GNU General Public License for more details.
+ 
+You should have received a copy of the GNU General Public License along
+with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
 import sys
-sys.path.append('/usr/share/inkscape/extensions') #path to extensions
-
-# The simplestyle module provides functions for style parsing.
 import inkex
 from simplestyle import *
 from math import radians, pi, cos, sin
@@ -116,10 +128,6 @@ class Dome_Pattern(inkex.Effect):
         #change radius(cm) into pixels
         r_px = inkex.unittouu(str(r_cm)+'cm')
         thickness_px = inkex.unittouu(str(thickness) + "cm")
-        
-        # setup stderr so that we can print to it for debugging        
-        #saveout = sys.stdout
-        #sys.stdout = sys.stderr
 
         # use the same style info for all lines and arcs
         line_style = {'stroke': '#000000', 'stroke-width': '0.5px', 'fill': 'none'}

@@ -1,16 +1,23 @@
 #!/usr/bin/env python
+"""
+abag_bagpat.py
+The original Ananabag pattern generator inkscape extension
+Copyright (C) 2014 Samuel Hodges <octerman@gmail.com>
 
-# These two lines are only needed if you don't put the script directly into
-# the installation directory
-import sys
-try:
-    import inkex
-except ImportError as e:
-    #import sys
-    sys.path.append('/usr/share/inkscape/extensions')
-    import inkex
-
-# The simplestyle module provides functions for style parsing.
+This program is free software: you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the
+Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+ 
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+See the GNU General Public License for more details.
+ 
+You should have received a copy of the GNU General Public License along
+with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+import inkex
 import re
 from simplestyle import formatStyle
 from simplepath import parsePath
@@ -23,11 +30,6 @@ from abag_utils import line, ellipse, ellipseId, DomeSegment, RectanglePiece
 # make aliases
 SubElement = inkex.etree.SubElement
 
-#BASE_TEXT_STYLES = {
-#    'text-align':'right',
-#    'font-size':'12px',
-#    'font-weight': 'normal'
-#}
 
 class DomePattern(inkex.Effect):
     """
@@ -236,9 +238,6 @@ class DomePattern(inkex.Effect):
         seamOuter = inkex.unittouu(str(o.seamOuter) + "cm")
         seamEnd = inkex.unittouu(str(o.seamEnd) + "cm")
 
-        # setup stderr so that we can print to it for debugging
-        #saveout = sys.stdout
-        #sys.stdout = sys.stderr
         # use inkex.errormsg('something')
 
         # line styles and node attributes

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
     <_name>Dome pattern</_name>
-    <id>org.ekips.filter.circle</id>
+    <id>org.ananabag.filter.abag_domepat</id>
     <dependency type="executable" location="extensions">abag_domepat.py</dependency>
     <dependency type="executable" location="extensions">inkex.py</dependency>
     <dependency type="executable" location="extensions">simplestyle.py</dependency>
