@@ -14,8 +14,7 @@ option to add in seams, and also renders the body and zipper components.
 
 ## Installation
 
-Copy the following file are required for this extension to work. They should
-have been included with this package:
+Copy the following files into your Inkscape extensions directory.
 
 * abag_utils.py
 * abag_domepat.py
@@ -23,7 +22,7 @@ have been included with this package:
 * abag_bagpat.py
 * abag_bagpat.inx
 
-These files should be copied to the appropriated location.
+Deepending on your OS the appropriated locations are:
 
 * Linux: ~/.config/inkscape/extensions
 * Mac OSX: /Applications/Inkscape.app/Contents/Resources/extensions/
