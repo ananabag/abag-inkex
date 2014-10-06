@@ -39,4 +39,4 @@ These files should be copied to the appropriated location.
 
 ## License
 
-Licensed under the [GNU GPL](http://www.gnu.org/licenses/gpl.html)
+Licensed under the [GNU GPL](http://www.gnu.org/licenses/gpl-3.0-standalone.html)
