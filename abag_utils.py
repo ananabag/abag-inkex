@@ -8,107 +8,169 @@ This program is free software: you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
 Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
- 
+
 This program is distributed in the hope that it will be useful, but
 WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 See the GNU General Public License for more details.
- 
+
 You should have received a copy of the GNU General Public License along
 with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 import inkex
 import math
+from math import pi, cos, sin
+from random import randint
 from simplestyle import formatStyle
+
+DEFAULT_STYLE = {
+    'stroke': '#ffffff',
+    'stroke-width': '0.5px',
+    'fill': 'none'
+}
+
+
+def point_on_circle(radius, angle):
+    x = radius * math.cos(angle)
+    y = radius * math.sin(angle)
+    return (x, y)
+
 
 def format_number(n, accuracy=6):
     """Formats a number in a friendly manner
     (removes trailing zeros and unneccesary point."""
 
-    fs = "%."+str(accuracy)+"f"
-    str_n = fs%float(n)
+    fs = "%." + str(accuracy) + "f"
+    str_n = fs % float(n)
     if '.' in str_n:
         str_n = str_n.rstrip('0').rstrip('.')
     if str_n == "-0":
         str_n = "0"
     #str_n = str_n.replace("-0", "0")
     return str_n
-    
-def circle(r, cx, cy, parent, style, start_end=(0,2*math.pi)):
-    # add in an id variable to the attributs so I can pass it to the text 
-    # to put it along the path
-    if not style:
-        style = {'stroke': '#000000', 'stroke-width': '0.5px', 'fill': 'none'}
-        
-    attribs = {'style': formatStyle(style),
-        inkex.addNS('cx','sodipodi')        :str(cx),
-        inkex.addNS('cy','sodipodi')        :str(cy),
-        inkex.addNS('rx','sodipodi')        :str(r),
-        inkex.addNS('ry','sodipodi')        :str(r),
-        inkex.addNS('start','sodipodi')     :str(start_end[0]),
-        inkex.addNS('end','sodipodi')       :str(start_end[1]),
-        inkex.addNS('open','sodipodi')      :'True',    #all ellipse sectors we will draw are open
-        inkex.addNS('type','sodipodi')      :'arc',
-        'transform'                         :''}
-    el = inkex.etree.SubElement(parent, inkex.addNS('path','svg'), ell_attribs)
-    return el
-    
-def ellipse((rx, ry), (cx, cy), parent, style=False, start_end=(0,2*math.pi)):
-    # add in an id variable to the attributs so I can pass it to the text 
-    # to put it along the path
-    if not style:
-        style = {'stroke': '#ffffff', 'stroke-width': '0.5px', 'fill': 'none'}
-        
-    ell_attribs = {'style': formatStyle(style),
-        inkex.addNS('cx','sodipodi')        :str(cx),
-        inkex.addNS('cy','sodipodi')        :str(cy),
-        inkex.addNS('rx','sodipodi')        :str(rx),
-        inkex.addNS('ry','sodipodi')        :str(ry),
-        inkex.addNS('start','sodipodi')     :str(start_end[0]),
-        inkex.addNS('end','sodipodi')       :str(start_end[1]),
-        inkex.addNS('open','sodipodi')      :'True',    #all ellipse sectors we will draw are open
-        inkex.addNS('type','sodipodi')      :'arc',
-        'transform'                         :''}
-    ell = inkex.etree.SubElement(parent, inkex.addNS('path','svg'), ell_attribs )
-    return ell
-    
-def ellipseId((rx, ry), (cx, cy), parent, ID, start_end=(0,2*math.pi), style=False):
-    # add in an id variable to the attributs so I can pass it to the text 
-    # to put it along the path
-    if not style:
-        style = {'stroke': '#ffffff', 'stroke-width': '0.5px', 'fill': 'none'}
-        
-    ell_attribs = {'style': formatStyle(style),
-        'id'                                :str(ID),
-        inkex.addNS('cx','sodipodi')        :str(cx),
-        inkex.addNS('cy','sodipodi')        :str(cy),
-        inkex.addNS('rx','sodipodi')        :str(rx),
-        inkex.addNS('ry','sodipodi')        :str(ry),
-        inkex.addNS('start','sodipodi')     :str(start_end[0]),
-        inkex.addNS('end','sodipodi')       :str(start_end[1]),
-        inkex.addNS('open','sodipodi')      :'True',    #all ellipse sectors we will draw are open
-        inkex.addNS('type','sodipodi')      :'arc',
-        'transform'                         :''}
-    ell = inkex.etree.SubElement(parent, inkex.addNS('path','svg'), ell_attribs )
-    return ell
 
-#draw an SVG line segment between the given (raw) points
-def line( (x1, y1), (x2, y2), name, parent, style):
-    if not style:
-        style = {'stroke': '#ffffff', 'stroke-width': '0.5px'}
-        
-    line_attribs = {'style' : formatStyle(style),
-                    inkex.addNS('label','inkscape') : name,
-                    'd' : 'M '+str(x1)+','+str(y1)+' L '+str(x2)+','+str(y2)}
 
-    line = inkex.etree.SubElement(parent, inkex.addNS('path','svg'), line_attribs )
+def circle(r, cx, cy, parent, style, start_end=(0, 2 * math.pi)):
+    # add in an id variable to the attributs so I can pass it to the text
+    # to put it along the path
+    if not style:
+        style = DEFAULT_STYLE
+
+    attrs = {
+        'style': formatStyle(style),
+        inkex.addNS('cx', 'sodipodi'): str(cx),
+        inkex.addNS('cy', 'sodipodi'): str(cy),
+        inkex.addNS('rx', 'sodipodi'): str(r),
+        inkex.addNS('ry', 'sodipodi'): str(r),
+        inkex.addNS('start', 'sodipodi'): str(start_end[0]),
+        inkex.addNS('end', 'sodipodi'): str(start_end[1]),
+        # Ellipse extors will be drawn open
+        inkex.addNS('open', 'sodipodi'): 'True',
+        inkex.addNS('type', 'sodipodi'): 'arc',
+        'transform': ''
+    }
+    return inkex.etree.SubElement(parent, inkex.addNS('path', 'svg'), attrs)
+
+
+def ellipse((rx, ry), (cx, cy), parent, style=False, startEnd=(0, 2 * math.pi)):
+    # add in an id variable to the attributs so I can pass it to the text
+    # to put it along the path
+    if not style:
+        style = DEFAULT_STYLE
+
+    attrs = {
+        'style': formatStyle(style),
+        inkex.addNS('cx', 'sodipodi'): str(cx),
+        inkex.addNS('cy', 'sodipodi'): str(cy),
+        inkex.addNS('rx', 'sodipodi'): str(rx),
+        inkex.addNS('ry', 'sodipodi'): str(ry),
+        inkex.addNS('start', 'sodipodi'): str(startEnd[0]),
+        inkex.addNS('end', 'sodipodi'): str(startEnd[1]),
+        # Ellipse sectors drawn open
+        inkex.addNS('open', 'sodipodi'): 'True',
+        inkex.addNS('type', 'sodipodi'): 'arc',
+        'transform': ''
+    }
+    return inkex.etree.SubElement(parent, inkex.addNS('path', 'svg'), attrs)
+
+
+def ellipseId((rx, ry), (cx, cy), parent, nid, startEnd=(0, 2 * math.pi),
+                                                                style=False):
+    # add in an id variable to the attributs so I can pass it to the text
+    # to put it along the path
+    if not style:
+        style = DEFAULT_STYLE
+
+    attrs = {
+        'style': formatStyle(style),
+        'id': str(nid),
+        inkex.addNS('cx', 'sodipodi'): str(cx),
+        inkex.addNS('cy', 'sodipodi'): str(cy),
+        inkex.addNS('rx', 'sodipodi'): str(rx),
+        inkex.addNS('ry', 'sodipodi'): str(ry),
+        inkex.addNS('start', 'sodipodi'): str(startEnd[0]),
+        inkex.addNS('end', 'sodipodi'): str(startEnd[1]),
+        # Ellipse sectors will be drawn open
+        inkex.addNS('open', 'sodipodi'): 'True',
+        inkex.addNS('type', 'sodipodi'): 'arc',
+        'transform': ''
+    }
+    return inkex.etree.SubElement(parent, inkex.addNS('path', 'svg'), attrs)
+
+ellipse_id = ellipseId
+
+
+def line((x1, y1), (x2, y2), name, parent, style):
+    """draw an SVG line segment between the given (raw) points"""
+    if not style:
+        style = DEFAULT_STYLE
+
+    attrs = {
+        'style': formatStyle(style),
+        inkex.addNS('label', 'inkscape'): name,
+        'd': 'M ' + str(x1) + ',' + str(y1) + ' L ' + str(x2) + ',' + str(y2)
+    }
+    inkex.etree.SubElement(parent, inkex.addNS('path', 'svg'), attrs)
+
+
+def make_segment_data(radius, segments):
+    """
+    Calculate the angles and radiei needed to draw the variouse arcs.
+
+    @param radius Radius of the constucted dome in cm
+    @param segments Number of segments(resolution) to divide the dome into
+
+    @return data A dictionary of <segment number>: (angle, radius)
+    """
+    data = {}
+    angle_a = (pi / 2) / segments
+    angle_b = (pi - angle_a) / 2
+    thickness = (cos(angle_b) * radius) * 2
+    #main loop to calculate the needed angle and radius for the cone pattern
+    for i in range(1, segments + 1):
+        angle_m = angle_a * i
+        cone_r = radius * sin(angle_m)
+        c = 2 * pi * cone_r
+
+        angle_c = 0
+        if i == segments:
+            angle_c = angle_b
+        else:
+            angle_c = pi - (pi / 2) - angle_m
+            angle_c = angle_b - angle_c
+        seg_r = cone_r / cos(angle_c)
+        #find the angle for the flat pattern from the radians
+        # fomular s/r = theta
+        angle_t = c / seg_r
+        data[i] = (angle_t, seg_r)
+    return data, thickness
+
 
 class Vector2(object):
 
     __slots__ = ('_v',)
 
     _gameobjects_vector = 2
-
 
     def __init__(self, x=0., y=0.):
         """Initialise a vector
@@ -127,12 +189,13 @@ class Vector2(object):
 
     def _get_length(self):
         x, y = self._v
-        return math.sqrt(x*x + y*y)
+        return math.sqrt(x * x + y * y)
+
     def _set_length(self, length):
         v = self._v
         try:
             x, y = v
-            l = length / math.sqrt(x*x +y*y)
+            l = length / math.sqrt(x * x + y * y)
         except ZeroDivisionError:
             v[0] = 0.0
             v[1] = 0.0
@@ -141,13 +204,11 @@ class Vector2(object):
         v[1] *= l
     length = property(_get_length, _set_length, None, "Length of the vector")
 
-
     @classmethod
     def from_floats(cls, x, y):
         vec = cls.__new__(cls, object)
         vec._v = [x, y]
         return vec
-
 
     @classmethod
     def from_iter(cls, iterable):
@@ -156,11 +217,10 @@ class Vector2(object):
         @param iterable: An iterable of at least 2 numeric values
 
         """
-        next = iter(iterable).next
+        n = iter(iterable).next
         vec = cls.__new__(cls, object)
-        vec._v = [float(next()), float(next())]
+        vec._v = [float(n()), float(n())]
         return vec
-
 
     @classmethod
     def from_points(cls, p1, p2):
@@ -172,7 +232,7 @@ class Vector2(object):
         v = cls.__new__(cls, object)
         x, y = p1
         xx, yy = p2
-        v._v = [float(xx-x), float(yy-y)]
+        v._v = [float(xx - x), float(yy - y)]
         return v
 
     @classmethod
@@ -180,7 +240,6 @@ class Vector2(object):
         v = cls.__new__(cls, object)
         v._v = list(sequence[:2])
         return v
-
 
     def copy(self):
         """Returns a copy of this object."""
@@ -190,6 +249,7 @@ class Vector2(object):
 
     def get_x(self):
         return self._v[0]
+
     def set_x(self, x):
         try:
             self._v[0] = 1.0 * x
@@ -199,6 +259,7 @@ class Vector2(object):
 
     def get_y(self):
         return self._v[1]
+
     def set_y(self, y):
         try:
             self._v[1] = 1.0 * y
@@ -220,20 +281,18 @@ class Vector2(object):
         return "Vector2(%s, %s)" % (x, y)
 
     def __iter__(self):
-
         return iter(self._v[:])
 
     def __len__(self):
-
         return 2
-
 
     def __getitem__(self, index):
         """Gets a component as though the vector were a list."""
         try:
             return self._v[index]
         except IndexError:
-            raise IndexError, "There are 2 values in this object, index should be 0 or 1"
+            msg = "There are 2 values in this object, index should be 0 or 1"
+            raise IndexError(msg)
 
     def __setitem__(self, index, value):
         """Sets a component as though the vector were a list."""
@@ -241,10 +300,10 @@ class Vector2(object):
         try:
             self._v[index] = 1.0 * value
         except IndexError:
-            raise IndexError, "There are 2 values in this object, index should be 0 or 1!"
+            msg = "There are 2 values in this object, index should be 0 or 1!"
+            raise IndexError(msg)
         except TypeError:
-            raise TypeError, "Must be a number"
-
+            raise TypeError("Must be a number")
 
     def __eq__(self, rhs):
         x, y = self._v
@@ -263,8 +322,7 @@ class Vector2(object):
     def __add__(self, rhs):
         x, y = self._v
         xx, yy = rhs
-        return Vector2.from_floats(x+xx, y+yy)
-
+        return Vector2.from_floats(x + xx, y + yy)
 
     def __iadd__(self, rhs):
         xx, yy = rhs
@@ -276,17 +334,17 @@ class Vector2(object):
     def __radd__(self, lhs):
         x, y = self._v
         xx, yy = lhs
-        return self.from_floats(x+xx, y+yy)
+        return self.from_floats(x + xx, y + yy)
 
     def __sub__(self, rhs):
         x, y = self._v
         xx, yy = rhs
-        return Vector2.from_floats(x-xx, y-yy)
+        return Vector2.from_floats(x - xx, y - yy)
 
     def __rsub__(self, lhs):
         x, y = self._v
         xx, yy = lhs
-        return self.from_floats(xx-x, yy-y)
+        return self.from_floats(xx - x, yy - y)
 
     def _isub__(self, rhs):
 
@@ -297,13 +355,16 @@ class Vector2(object):
         return self
 
     def __mul__(self, rhs):
-        """Return the result of multiplying this vector with a scalar or a vector-list object."""
+        """
+        Return the result of multiplying this vector with a scalar or a
+        vector-list object.
+        """
         x, y = self._v
         if hasattr(rhs, "__getitem__"):
             xx, yy = rhs
-            return Vector2.from_floats(x*xx, y*yy)
+            return Vector2.from_floats(x * xx, y * yy)
         else:
-            return Vector2.from_floats(x*rhs, y*rhs)
+            return Vector2.from_floats(x * rhs, y * rhs)
 
     def __imul__(self, rhs):
         """Multiplys this vector with a scalar or a vector-list object."""
@@ -326,17 +387,19 @@ class Vector2(object):
         else:
             xx = lhs
             yy = lhs
-        return self.from_floats(x*xx, y*yy)
+        return self.from_floats(x * xx, y * yy)
 
     def __div__(self, rhs):
-        """Return the result of dividing this vector by a scalar or a vector-list object."""
+        """
+        Return the result of dividing this vector by a scalar or a
+        vector-list object.
+        """
         x, y = self._v
         if hasattr(rhs, "__getitem__"):
             xx, yy, = rhs
-            return Vector2.from_floats(x/xx, y/yy)
+            return Vector2.from_floats(x / xx, y / yy)
         else:
-            return Vector2.from_floats(x/rhs, y/rhs)
-
+            return Vector2.from_floats(x / rhs, y / rhs)
 
     def __idiv__(self, rhs):
         """Divides this vector with a scalar or a vector-list object."""
@@ -359,7 +422,7 @@ class Vector2(object):
         else:
             xx = lhs
             yy = lhs
-        return self.from_floats(xx/x, yy/x)
+        return self.from_floats(xx / x, yy / x)
 
     def __neg__(self):
         """Return the negation of this vector."""
@@ -389,8 +452,7 @@ class Vector2(object):
 
         ord_x = ord('x')
         v = self._v
-        return tuple( v[ord(c) - ord_x] for c in keys )
-
+        return tuple(v[ord(c) - ord_x] for c in keys)
 
     def as_tuple(self):
         """Converts this vector to a tuple.
@@ -400,19 +462,17 @@ class Vector2(object):
         """
         return tuple(self._v)
 
-
     def get_length(self):
         """Returns the length of this vector."""
         x, y = self._v
-        return math.sqrt(x*x + y*y)
+        return math.sqrt(x * x + y * y)
     get_magnitude = get_length
-
 
     def normalise(self):
         """Normalises this vector."""
         v = self._v
         x, y = v
-        l = math.sqrt(x*x +y*y)
+        l = math.sqrt(x * x + y * y)
         try:
             v[0] /= l
             v[1] /= l
@@ -426,29 +486,29 @@ class Vector2(object):
         """Compute the perpendicular."""
         x, y = self._v
         return Vector2(-y, x)
-    
+
     def set_length(self, length):
         """Sets the magnitude for the vector."""
         angle = self.get_angle()
         x = length * math.cos(angle)
         y = length * math.sin(angle)
         self.set_x(x)
-        self.set_y(y)      
-        
+        self.set_y(y)
+
     set_magnitude = set_length
-    
-    def get_angle(self, degrees = False):
+
+    def get_angle(self, degrees=False):
         """Get the angle made agains the x axis"""
         x, y = self._v
         if degrees:
-            return math.degrees(math.atan2(y,x))
+            return math.degrees(math.atan2(y, x))
         else:
             return math.atan2(y, x)
 
     def get_normalised(self):
         x, y = self._v
-        l = math.sqrt(x*x +y*y)
-        return Vector2.from_floats(x/l, y/l)
+        l = math.sqrt(x * x + y * y)
+        return Vector2.from_floats(x / l, y / l)
     get_normalized = get_normalised
 
     def get_distance_to(self, p):
@@ -459,26 +519,123 @@ class Vector2(object):
         """
         x, y = self._v
         xx, yy = p
-        dx = xx-x
-        dy = yy-y
-        return math.sqrt( dx*dx + dy*dy )
+        dx = xx - x
+        dy = yy - y
+        return math.sqrt(dx * dx + dy * dy)
+
 
 class Path(object):
-    """SVG path class"""
+    """SVG path data class"""
 
     __slots__ = ('_d',)
 
     def __init__(self):
+        self._d = []
+
+    @property
+    def d(self):
+        """Get the data array for this path"""
+        return self._d
+
+    def __iter__(self):
+        for i in self._d:
+            yield i
+
+    def __len__(self):
+        return len(self._d)
+
+    def __repr__(self):
+        return "<abag_utils.Path %s>" % self._d
+
+    def __str__(self):
+        return self.__repr__()
+
+    def command(func):
+        def wrapper(self, *args):
+            # Check function called with correct number of arguments.
+            func(self, *args)
+            self._d.append([func.__name__, list(args)])
+        return wrapper
+
+    @command
+    def M(self, x, y):
         pass
-        
-    def moveTo(self):
+
+    @command
+    def m(self, x, y):
         pass
-        
-    def absMoveTo(self):
+
+    @command
+    def Z(self):
         pass
-        
-    def get_path_array(self):
-        return this._d
+
+    @command
+    def z(self):
+        pass
+
+    @command
+    def L(self, x, y):
+        pass
+
+    @command
+    def l(self, x, y):
+        pass
+
+    @command
+    def H(self, x):
+        pass
+
+    @command
+    def h(self, x):
+        pass
+
+    @command
+    def V(self, y):
+        pass
+
+    @command
+    def v(self, y):
+        pass
+
+    @command
+    def C(self, x1, y1, x2, y2, x, y):
+        pass
+
+    @command
+    def c(self, x1, y1, x2, y2, x, y):
+        pass
+
+    @command
+    def S(self, x2, y2, x, y):
+        pass
+
+    @command
+    def s(self, x2, y2, x, y):
+        pass
+
+    @command
+    def Q(self, x1, y1, x, y):
+        pass
+
+    @command
+    def q(self, x1, y1, x, y):
+        pass
+
+    @command
+    def T(self, x, y):
+        pass
+
+    @command
+    def t(self, x, y):
+        pass
+
+    @command
+    def A(self, rx, ry, xar, laf, sf, x, y):
+        pass
+
+    @command
+    def a(self, rx, ry, xar, laf, sw, x, y):
+        pass
 
 
 class Piece(object):
@@ -486,32 +643,124 @@ class Piece(object):
     Base class for all pattern pieces
     """
 
-    def __init__(self, label = '', name = ''):
+    def __init__(self, label='', name=''):
         self.label = label
         self.name = name
-        self.seams = False
-        
-        self._seams = self.seams
         self._d = Path()
-        
+        self._path = Path()
+        self.start_loc = (0, 0)
+
+    def _build_path(self):
+        pass
+
+    @property
+    def path(self):
+        if len(self._path) == 0:
+            self._build_path()
+        return self._path
+
+    @property
+    def svg_id(self):
+        ret = self.label
+        if ret == '':
+            ret =  'piece_'
+        return ret + str(randint(1, 50000))
+
+
+    # TODO: Made this into a property with getters and setters
+    def set_start_loc(self, x, y):
+        self.start_loc = (x, y)
+        self._build_path()
+
+
+class DomePiece(Piece):
+
+    def __init__(self, _id, angle, radius, thickness):
+        super(DomePiece, self).__init__()
+        self.id = _id
+        # Angle in radians
+        self.angle = angle
+        self.outer_radius = radius
+        self.inner_radius = radius - thickness
+        self.thickness = thickness
+
+    @property
+    def radius(self):
+        return self.outer_radius
+
+    @staticmethod
+    def get_arch_flags(angle):
+        if angle <= pi:
+            laf1 = 0
+            sf1 = 1
+            laf2 = 0
+            sf2 = 0
+        else:
+            laf1 = 1
+            sf1 = 1
+            laf2 = 1
+            sf2 = 0
+        return laf1, sf1, laf2, sf2
+
+    def _build_path(self):
+        cx, cy = self.start_loc
+        angle = self.angle
+        r1 = self.outer_radius
+        r2 = self.inner_radius
+        sx = cx + r1
+        sy = cy
+
+        p = Path()
+        p.M(sx, sy)
+
+        # FIXME: The large-arc-flag and the sweep-flag need to toggled
+        # according to the radians turned. This should be calculated here
+        # before any 'A' function calles are made.
+        #inkex.debug(angle)
+        if angle <= pi:
+            laf = 0
+            sf = 1
+            laf2 = 0
+            sf2 = 0
+        else:
+            laf = 1
+            sf = 1
+            laf2 = 1
+            sf2 = 0
+
+        x, y = point_on_circle(r1, angle)
+        p.A(r1, r1, 0, laf, sf, cx + x, cy + y)
+
+        x, y = point_on_circle(r2, angle)
+        p.L(cx + x, cy + y)
+
+        p.A(r2, r2, 0, laf2, sf2, cx + r2, cy)
+        p.L(sx, sy)
+        p.Z()
+
+        self._path = p
+
 
 class RectanglePiece(Piece):
     """
-    The RectanglePiece class. The main aim of this class is to make drawing and 
+    The RectanglePiece class. The main aim of this class is to make drawing and
     rendering svg rectangles easy
     """
-    def __init__(self, width, height, label = '', name = ''):
+    def __init__(self, width, height, label='', name=''):
         Piece.__init__(self, label, name)
         self.width = width
         self.height = height
-        self.start_loc = (0,0)
-        
+        self.start_loc = (0, 0)
+        self.seams = False
+
         # set the path data
-        self.path_data = ((self.width, 0.0),
-                        (0.0, self.height),
-                        (-self.width, 0.0),
-                        (0.0, -self.height))
-        
+        self.path_data = (
+            (self.width, 0.0),
+            (0.0, self.height),
+            (-self.width, 0.0),
+            (0.0, -self.height)
+        )
+
     def get_svgd(self):
         """
         @return Tuple Returns a Tuple suitable for use in an SVG 'd' path string
@@ -521,7 +770,7 @@ class RectanglePiece(Piece):
             d += "%f, %f " % i
         d += "z"
         return d
-       
+
     def get_seams_svgd(self):
         """
         @return String Returns a string suitable for use as an SVG 'd' path
@@ -529,63 +778,69 @@ class RectanglePiece(Piece):
         """
         if not self.seams:
             raise RuntimeError('Seams are not set yet')
-        
-        new_width = self.width + self.right + self.left
-        new_height = self.height + self.top + self.bottom
-        seam_data = ((new_width, 0.0),
-                (0.0, new_height),
-                (-new_width, 0.0),
-                (0.0, -new_height))
-        d = "m%f, %f " % (self.start_loc[0] - self.left, self.start_loc[1] - self.top)
-        for i in seam_data:
+
+        width = self.width + self.right + self.left
+        height = self.height + self.top + self.bottom
+        sx, sy = self.start_loc
+        data = (
+            (width, 0.0),
+            (0.0, height),
+            (-width, 0.0),
+            (0.0, -height)
+        )
+        d = "m%f, %f " % (sx - self.left, sy - self.top)
+        for i in data:
             d += "%f, %f " % i
         d += "z"
         return d
-    
+
     def get_all_svgd(self):
         if self.seams:
             return (self.get_svgd(), self.get_seams_svgd())
         else:
             return (self.get_svgd())
-        
+
     def get_seam_offset(self, sx, sy):
         return (sx - self.left, sy - self.top)
-        
-    def scale(self, x, y = False):
+
+    def scale(self, x, y=False):
         """
         Scale the dimensions by the factor
         """
         if y is False:
             y = x
         self.width *= x
-        self.height *= y        
-    
-    def set_seams(self, top, right = 0, bottom = 0, left = 0):
+        self.height *= y
+
+    def set_seams(self, top, right=0, bottom=0, left=0):
         self.seams = True
         self.top = top
         self.bottom = bottom
         self.right = right
         self.left = left
-    
+
     def set_all_seams(self, value):
         self.seams = True
-        self.top, self.right, self.bottom, self.left = value, value, value, value
-    
+        self.top = value
+        self.right = value
+        self.bottom = value
+        self.left = value
+
     def get_width(self):
         return self.width
-    
+
     def set_width(self, w):
         self.width = w
-        
+
     def get_height(self):
         return self.height
-    
+
     def set_height(self, h):
         self.height = h
-        
+
     def get_start_loc(self):
         return self.start_loc
-    
+
     def set_start_loc(self, x, y):
         self.start_loc = (x, y)
 
@@ -602,7 +857,8 @@ class Dome(object):
         self.endseam = endSeam
         self.segment = {}
 
-class DomeSegment(object):     
+
+class DomeSegment(object):
     """
     Class to hold all information needed to draw a dome segment. Including a few
     helper methods to render seam allowences and stuff
@@ -613,37 +869,37 @@ class DomeSegment(object):
         # this is for the outer radius
         self.radiusOuter = segRadius
         self.thickness = thickness
-        
+
         # set some of the other variables for calculation
         self.radiusInner = segRadius - thickness
         self.angleD = math.degrees(angle)
         self.pcx = 0
         self.pcy = 0
-        
+
     @staticmethod
     def point_on_circle(radius, angle):
         x = radius * math.cos(angle)
         y = radius * math.sin(angle)
         return (x, y)
-        
+
     def __get_cap(self, angle):
         return self.__get_raw_cap(angle, self.radiusInner, self.radiusOuter)
-    
+
     def __get_raw_cap(self, angle, rin, rout):
         x1, y1 = self.point_on_circle(rin, angle)
         x1 = self.pcx + x1
-        y1 = self.pcy + y1        
+        y1 = self.pcy + y1
         x2, y2 = self.point_on_circle(rout, angle)
         x2 = self.pcx + x2
         y2 = self.pcy + y2
         return ((x1, y1), (x2, y2))
-        
+
     def get_inner_arch(self):
         return (self.radiusInner, 0, self.angle)
-        
+
     def get_outer_arch(self):
         return (self.radiusOuter, 0, self.angle)
-    
+
     def get_text_arch(self):
         radius = self.radiusOuter - (self.thickness / 3)
         return (radius, 0, self.angle)
@@ -655,7 +911,7 @@ class DomeSegment(object):
     def get_outer_seam_arch(self):
         radius = self.radiusOuter + self.outseam
         return (radius, 0, self.angle)
-    
+
     def get_end_seam_cap(self):
         # get the full end cap
         rin = self.radiusInner - self.inseam
@@ -669,23 +925,23 @@ class DomeSegment(object):
         perp.set_length(self.endseam)
         px = perp.get_x()
         py = perp.get_y()
-        
+
         # get extra points
         p3 = (p1[0] + px, p1[1] + py)
         p4 = (p2[0] + px, p2[1] + py)
-        
+
         # create the d path
         svgd = 'M%.8f, %.8f' % p2
         svgd += 'L%.8f, %.8f' % p4
         svgd += 'L%.8f, %.8f' % p3
         svgd += 'L%.8f, %.8f' % p1
-  
+
         return svgd
-    
+
     def get_start_seam_cap(self):
         # get the full end cap
         rin = self.radiusInner - self.inseam
-        rout = self.radiusOuter + self.outseam        
+        rout = self.radiusOuter + self.outseam
         p1, p2 = self.__get_raw_cap(0, rin, rout)
 
         # create a vecotr from points
@@ -695,39 +951,39 @@ class DomeSegment(object):
         perp.set_length(self.endseam)
         px = perp.get_x()
         py = perp.get_y()
-        
+
         # get extra points
         p3 = (p1[0] - px, p1[1] - py)
         p4 = (p2[0] - px, p2[1] - py)
-        
+
         # create the d path
         svgd = 'M%.8f, %.8f' % p2
         svgd += 'L%.8f, %.8f' % p4
         svgd += 'L%.8f, %.8f' % p3
         svgd += 'L%.8f, %.8f' % p1
-  
+
         return svgd
 
     def get_start_cap(self):
         return self.__get_cap(0)
-        
+
     def get_end_cap(self):
         return self.__get_cap(self.angle)
-    
+
     def set_all_seams(self, inner, outer, end):
         self.inseam = inner
         self.outseam = outer
         self.endseam = end
-        
+
     def set_inner_seam(self, s):
         self.inseam = s
-    
+
     def set_outer_seam(self, s):
         self.outseam = s
-        
+
     def set_end_seam(self, s):
         self.endseam = s
-        
+
     def setPageCenter(self, x, y):
         self.pcx = x
         self.pcy = y
