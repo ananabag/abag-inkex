@@ -8,93 +8,50 @@ This program is free software: you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
 Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
- 
+
 This program is distributed in the hope that it will be useful, but
 WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 See the GNU General Public License for more details.
- 
+
 You should have received a copy of the GNU General Public License along
 with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-import sys
 import inkex
 from simplestyle import *
-from math import radians, pi, cos, sin
+from simplepath import formatPath
+from math import pi, cos, sin
 from random import randint
+from abag_utils import line, ellipse, ellipse_id, point_on_circle, Path
 
-def point_on_circle(radius, angle):
-    x = radius * cos(angle)
-    y = radius * sin(angle)
-    return (x, y)
-    
+
 def get_segment_data(radius, segments):
     """calculate the angles and radiei needed to draw the variouse arcs"""
     data = {}
-    angle_a = (pi/2)/segments
-    angle_b = (pi-angle_a)/2
-    thickness = (cos(angle_b)*radius)*2
+    angle_a = (pi / 2) / segments
+    angle_b = (pi - angle_a) / 2
+    thickness = (cos(angle_b) * radius) * 2
     #main loop to calculate the needed angle and radius for the cone pattern
-    for i in range(1,segments+1):
+    for i in range(1, segments + 1):
         angle_m = angle_a * i
         cone_r = radius * sin(angle_m)
         c = 2 * pi * cone_r
-        
+
         angle_c = 0
         if i == segments:
             angle_c = angle_b
         else:
-            angle_c = pi - (pi/2) - angle_m
+            angle_c = pi - (pi / 2) - angle_m
             angle_c = angle_b - angle_c
-        seg_r =  cone_r / cos(angle_c)            
-        #find the angle for the flat pattern from the radians fomular s/r = thata
+        seg_r = cone_r / cos(angle_c)
+        #find the angle for the flat pattern from the radians
+        # fomular s/r = thata
         angle_t = c / seg_r
         data[i] = (angle_t, seg_r)
     return data, thickness
 
-def draw_SVG_ellipse((rx, ry), (cx, cy), parent, style, start_end=(0,2*pi)):
-    # add in an id variable to the attributs so I can pass it to the text 
-    # to put it along the path
-    #style = {'stroke': '#000000', 'stroke-width': '0.5px', 'fill': 'none'}
-    ell_attribs = {'style': formatStyle(style),
-        inkex.addNS('cx','sodipodi')        :str(cx),
-        inkex.addNS('cy','sodipodi')        :str(cy),
-        inkex.addNS('rx','sodipodi')        :str(rx),
-        inkex.addNS('ry','sodipodi')        :str(ry),
-        inkex.addNS('start','sodipodi')     :str(start_end[0]),
-        inkex.addNS('end','sodipodi')       :str(start_end[1]),
-        inkex.addNS('open','sodipodi')      :'True',    #all ellipse sectors we will draw are open
-        inkex.addNS('type','sodipodi')      :'arc',
-        'transform'                         :''}
-    ell = inkex.etree.SubElement(parent, inkex.addNS('path','svg'), ell_attribs )
-    
-def draw_SVG_ellipse_id((rx, ry), (cx, cy), parent, ID, start_end=(0,2*pi)):
-    # add in an id variable to the attributs so I can pass it to the text 
-    # to put it along the path
-    style = {'stroke': '#ffffff', 'stroke-width': '0.5px', 'fill': 'none'}
-    ell_attribs = {'style': formatStyle(style),
-        'id'                                :str(ID),
-        inkex.addNS('cx','sodipodi')        :str(cx),
-        inkex.addNS('cy','sodipodi')        :str(cy),
-        inkex.addNS('rx','sodipodi')        :str(rx),
-        inkex.addNS('ry','sodipodi')        :str(ry),
-        inkex.addNS('start','sodipodi')     :str(start_end[0]),
-        inkex.addNS('end','sodipodi')       :str(start_end[1]),
-        inkex.addNS('open','sodipodi')      :'True',    #all ellipse sectors we will draw are open
-        inkex.addNS('type','sodipodi')      :'arc',
-        'transform'                         :''}
-    ell = inkex.etree.SubElement(parent, inkex.addNS('path','svg'), ell_attribs )
-    return ell
 
-#draw an SVG line segment between the given (raw) points
-def draw_SVG_line( (x1, y1), (x2, y2), name, parent, style):
-    line_attribs = {'style' : formatStyle(style),
-                    inkex.addNS('label','inkscape') : name,
-                    'd' : 'M '+str(x1)+','+str(y1)+' L '+str(x2)+','+str(y2)}
-
-    line = inkex.etree.SubElement(parent, inkex.addNS('path','svg'), line_attribs )
-
-class Dome_Pattern(inkex.Effect):
+class DomePattern(inkex.Effect):
     """
     Example Inkscape effect rendering to render a pattern to make a dome from
     """
@@ -113,82 +70,188 @@ class Dome_Pattern(inkex.Effect):
         self.OptionParser.add_option("-e", "--seams", action="store",
           type="int", dest="seams", default="1",
           help="How many seams per segment")
+
     def effect(self):
-        """
-        This is where eveything happens, we will define a function that we will pass
-        our infomation to
-        """
         r_cm = self.options.radius
         seg = self.options.segments
         seams = self.options.seams
         cx, cy = self.view_center
-        centre = self.view_center   #Put in in the centre of the current view
+        #Put in in the centre of the current views
+        center = self.view_center
         data_dict, thickness = get_segment_data(r_cm, seg)
-        
+
         #change radius(cm) into pixels
-        r_px = inkex.unittouu(str(r_cm)+'cm')
+        #r_px = inkex.unittouu(str(r_cm) + 'cm')
         thickness_px = inkex.unittouu(str(thickness) + "cm")
 
         # use the same style info for all lines and arcs
-        line_style = {'stroke': '#000000', 'stroke-width': '0.5px', 'fill': 'none'}
+        lineStyle = {
+            'stroke': '#000000',
+            'stroke-width': '0.5px',
+            'fill': 'none'
+        }
         # loop through the data_dict making each segment in turn using the data
-        for i in range(1, len(data_dict)+1):
-            
+        for i in range(1, len(data_dict) + 1):
+        #for angle, radius in data.items():
+
             # create a group to put this pattern in
             grp_name = "Segment " + str(i)
-            grp_attribs = {inkex.addNS('label','inkscape'):grp_name}
+            grp_attribs = {inkex.addNS('label', 'inkscape'): grp_name}
             #the group to put everything in
             grp = inkex.etree.SubElement(self.current_layer, 'g', grp_attribs)
-            
 
             #get the data we need from the dictionary
             angle, radius_cm = data_dict[i]
-            angle = angle/seams
+            radius_cm = radius
+            angle = angle / seams
             radius_px = inkex.unittouu(str(radius_cm) + "cm")
-            start_end = (0, angle)
+            #radiusPx = radius_px
+            startEnd = (0, angle)
             radius_s = radius_px - thickness_px
-            
+
             # draw the 2 arcs
-            draw_SVG_ellipse((radius_px, radius_px), (cx, cy), grp, line_style, start_end)
-            draw_SVG_ellipse((radius_s,radius_s), (cx, cy), grp, line_style, start_end)
-            
+            ellipse((radius_px, radius_px), center, grp, lineStyle, startEnd)
+            ellipse((radius_s, radius_s), center, grp, lineStyle, startEnd)
+
             # draw the lines between the 2 arcs making a nice segment
             x1, y1 = point_on_circle(radius_px, angle)
-            y1 = cy + y1
-            x1 = cx + x1
+            start = (cx + x1, cy + y1)
+
             x2, y2 = point_on_circle(radius_s, angle)
-            y2 = cy + y2
-            x2 = cx + x2
-            draw_SVG_line((x1, y1), (x2, y2), "line", grp, line_style)
+            end = (cx + x2, cy + y2)
+            line(start, end, "line", grp, lineStyle)
+
             # draw the last line
             x1, y1 = point_on_circle(radius_px, 0)
-            y1 = cy + y1
-            x1 = cx + x1
+            start = (cx + x1, cy + y1)
+
             x2, y2 = point_on_circle(radius_s, 0)
-            y2 = cy + y2
-            x2 = cx + x2
-            draw_SVG_line((x1, y1), (x2, y2), "line", grp, line_style)
-            
+            end = (cx + x2, cy + y2)
+            line(start, end, "line", grp, lineStyle)
+
             # draw arc to put the text along
             # FIXME there needs to be a ranbom part to this id
-            ID = "mypath"+str(i)+str(randint(1,50000))
-            radius_s = radius_px - (thickness_px/3)
-            ep = draw_SVG_ellipse_id((radius_s, radius_s), (cx, cy), grp, ID, start_end)
-            # string with infomation in it
-            s = "S:%i-[Rcm:%.1f,Sg:,%i,Se:%i, Th:%.2f]" % (i, r_cm, seg, seams, thickness)
-            
+            nid = "mypath" + str(i) + str(randint(1, 50000))
+            radius_s = radius_px - (thickness_px / 3)
+            ellipse_id((radius_s, radius_s), center, grp, nid, startEnd)
+
+            # Info string
+            info = "S:%i-[Rcm:%.1f,Sg:,%i,Se:%i, Th:%.2f]"
+            info = info % (i, r_cm, seg, seams, thickness)
+
             # Create text element
-            style = {'text-align' : 'right', 'font-size' : str(int(thickness_px / 8))}
-            t_attribs = {'style': formatStyle(style)}
-            text = inkex.etree.Element(inkex.addNS('text','svg'), t_attribs)
-            textpath = inkex.etree.SubElement( text, inkex.addNS('textPath', 'svg'))
-            textpath.set(inkex.addNS('href', 'xlink'), "#"+ID)
-            offset = 25/seg
-            textpath.set('startOffset', str(offset)+"%")
-            textpath.text = s
+            style = {
+                'text-align': 'right',
+                'font-size': str(int(thickness_px / 8))
+            }
+            attrs = {'style': formatStyle(style)}
+            text = inkex.etree.Element(inkex.addNS('text', 'svg'), attrs)
+            textpath = inkex.etree.SubElement(text,
+                                            inkex.addNS('textPath', 'svg'))
+            textpath.set(inkex.addNS('href', 'xlink'), "#" + nid)
+            offset = 25 / seg
+            textpath.set('startOffset', str(offset) + "%")
+            textpath.text = info
+
             # append it to the main group
             grp.append(text)
 
-d = Dome_Pattern()
+
+class DomePatternPath(DomePattern):
+
+    def __init__(self):
+        DomePattern.__init__(self)
+
+    def effect(self):
+        o = self.options
+        #r_cm = o.radius
+        seg = o.segments
+        seams = o.seams
+        cx, cy = center = self.view_center
+
+        # data is a dict object
+        data, thickness = get_segment_data(o.radians, seg)
+
+        #change radius(cm) into pixels
+        thickness_px = inkex.unittouu(str(thickness) + "cm")
+
+        # use the same style info for all lines and arcs
+        style = {'stroke': '#000000', 'stroke-width': '0.5px', 'fill': 'none'}
+        sattr = {'style': formatStyle(style), 'd': '', 'id': ''}
+
+        style = {'text-align': 'right', 'font-size': str(int(thickness_px / 8))}
+        iattr = {'style': formatStyle(style)}
+
+        # loop through the data making each segment in turn using the data
+        #for i in range(1, len(data) + 1):
+        for key in data:
+            i = key
+            # create a group to put this pattern in
+            attrs = {inkex.addNS('label', 'inkscape'): 'segment_%d' % key}
+            grp = inkex.etree.SubElement(self.current_layer, 'g', attrs)
+
+            #get the data we need from the dictionary
+            angle, radius = data[key]
+            angle = angle / seams
+            r1 = inkex.unittouu(str(radius) + "cm")
+            r2 = r1 - thickness_px
+
+            # Start (x, y) also the end point
+            sx = cx + r1
+            sy = cy
+
+            path = Path()
+            path.M(sx, sy)
+
+            # FIXME: The large-arc-flag and the sweep-flag need to toggled
+            # according to the radians turned. This should be calculated here
+            # before any 'A' function calles are made.
+            inkex.debug(angle)
+            if angle <= pi:
+                laf = 0
+                sf = 1
+                laf2 = 0
+                sf2 = 0
+            else:
+                laf = 1
+                sf = 1
+                laf2 = 1
+                sf2 = 0
+
+            x, y = point_on_circle(r1, angle)
+            path.A(r1, r1, 0, laf, sf, cx + x, cy + y)
+
+            x, y = point_on_circle(r2, angle)
+            path.L(cx + x, cy + y)
+
+            path.A(r2, r2, 0, laf2, sf2, cx + r2, cy)
+            path.L(sx, sy)
+            path.Z()
+
+            #sattr['d'] = path.to_d_string()
+            sattr['d'] = formatPath(path)
+            sattr['id'] = 'segment_path' + str(i) + str(randint(1, 50000))
+
+            inkex.etree.SubElement(grp, inkex.addNS('path', 'svg'), sattr)
+
+            # draw arc to put the text along
+            # FIXME: use a better UUID generator
+            nid = "info_label_path" + str(i) + str(randint(1, 50000))
+
+            r3 = r1 - (thickness_px / 3)
+            ellipse_id((r3, r3), center, grp, nid, (0, angle))
+
+            text = inkex.etree.Element(inkex.addNS('text', 'svg'), iattr)
+            textpath = inkex.etree.SubElement(text,
+                                            inkex.addNS('textPath', 'svg'))
+            textpath.set(inkex.addNS('href', 'xlink'), "#" + nid)
+            textpath.set('startOffset', str(25 / seg) + "%")
+            textpath.text = "S:%i-[Rcm:%.1f,Sg:,%i,Se:%i, Th:%.2f]" % \
+                                            (i, o.radius, seg, seams, thickness)
+            # append it to the main group
+            grp.append(text)
+
+
+d = DomePatternPath()
 d.affect()
-        
+
