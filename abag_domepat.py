@@ -18,11 +18,11 @@ You should have received a copy of the GNU General Public License along
 with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 import inkex
-from simplestyle import *
+from simplestyle import formatStyle
 from simplepath import formatPath
 from math import pi, cos, sin
 from random import randint
-from abag_utils import line, ellipse, ellipse_id, point_on_circle, Path
+from abag_utils import ellipse_id, point_on_circle, Path
 
 
 def get_segment_data(radius, segments):
@@ -51,7 +51,7 @@ def get_segment_data(radius, segments):
     return data, thickness
 
 
-class DomePattern(inkex.Effect):
+class Domepat(inkex.Effect):
     """
     Example Inkscape effect rendering to render a pattern to make a dome from
     """
@@ -72,97 +72,6 @@ class DomePattern(inkex.Effect):
           help="How many seams per segment")
 
     def effect(self):
-        r_cm = self.options.radius
-        seg = self.options.segments
-        seams = self.options.seams
-        cx, cy = self.view_center
-        #Put in in the centre of the current views
-        center = self.view_center
-        data_dict, thickness = get_segment_data(r_cm, seg)
-
-        #change radius(cm) into pixels
-        #r_px = inkex.unittouu(str(r_cm) + 'cm')
-        thickness_px = inkex.unittouu(str(thickness) + "cm")
-
-        # use the same style info for all lines and arcs
-        lineStyle = {
-            'stroke': '#000000',
-            'stroke-width': '0.5px',
-            'fill': 'none'
-        }
-        # loop through the data_dict making each segment in turn using the data
-        for i in range(1, len(data_dict) + 1):
-        #for angle, radius in data.items():
-
-            # create a group to put this pattern in
-            grp_name = "Segment " + str(i)
-            grp_attribs = {inkex.addNS('label', 'inkscape'): grp_name}
-            #the group to put everything in
-            grp = inkex.etree.SubElement(self.current_layer, 'g', grp_attribs)
-
-            #get the data we need from the dictionary
-            angle, radius_cm = data_dict[i]
-            radius_cm = radius
-            angle = angle / seams
-            radius_px = inkex.unittouu(str(radius_cm) + "cm")
-            #radiusPx = radius_px
-            startEnd = (0, angle)
-            radius_s = radius_px - thickness_px
-
-            # draw the 2 arcs
-            ellipse((radius_px, radius_px), center, grp, lineStyle, startEnd)
-            ellipse((radius_s, radius_s), center, grp, lineStyle, startEnd)
-
-            # draw the lines between the 2 arcs making a nice segment
-            x1, y1 = point_on_circle(radius_px, angle)
-            start = (cx + x1, cy + y1)
-
-            x2, y2 = point_on_circle(radius_s, angle)
-            end = (cx + x2, cy + y2)
-            line(start, end, "line", grp, lineStyle)
-
-            # draw the last line
-            x1, y1 = point_on_circle(radius_px, 0)
-            start = (cx + x1, cy + y1)
-
-            x2, y2 = point_on_circle(radius_s, 0)
-            end = (cx + x2, cy + y2)
-            line(start, end, "line", grp, lineStyle)
-
-            # draw arc to put the text along
-            # FIXME there needs to be a ranbom part to this id
-            nid = "mypath" + str(i) + str(randint(1, 50000))
-            radius_s = radius_px - (thickness_px / 3)
-            ellipse_id((radius_s, radius_s), center, grp, nid, startEnd)
-
-            # Info string
-            info = "S:%i-[Rcm:%.1f,Sg:,%i,Se:%i, Th:%.2f]"
-            info = info % (i, r_cm, seg, seams, thickness)
-
-            # Create text element
-            style = {
-                'text-align': 'right',
-                'font-size': str(int(thickness_px / 8))
-            }
-            attrs = {'style': formatStyle(style)}
-            text = inkex.etree.Element(inkex.addNS('text', 'svg'), attrs)
-            textpath = inkex.etree.SubElement(text,
-                                            inkex.addNS('textPath', 'svg'))
-            textpath.set(inkex.addNS('href', 'xlink'), "#" + nid)
-            offset = 25 / seg
-            textpath.set('startOffset', str(offset) + "%")
-            textpath.text = info
-
-            # append it to the main group
-            grp.append(text)
-
-
-class DomePatternPath(DomePattern):
-
-    def __init__(self):
-        DomePattern.__init__(self)
-
-    def effect(self):
         o = self.options
         #r_cm = o.radius
         seg = o.segments
@@ -170,13 +79,13 @@ class DomePatternPath(DomePattern):
         cx, cy = center = self.view_center
 
         # data is a dict object
-        data, thickness = get_segment_data(o.radians, seg)
+        data, thickness = get_segment_data(o.radius, seg)
 
         #change radius(cm) into pixels
         thickness_px = inkex.unittouu(str(thickness) + "cm")
 
         # use the same style info for all lines and arcs
-        style = {'stroke': '#000000', 'stroke-width': '0.5px', 'fill': 'none'}
+        style = {'stroke': '#000000', 'stroke-width': '1.0px', 'fill': 'none'}
         sattr = {'style': formatStyle(style), 'd': '', 'id': ''}
 
         style = {'text-align': 'right', 'font-size': str(int(thickness_px / 8))}
@@ -196,6 +105,9 @@ class DomePatternPath(DomePattern):
             r1 = inkex.unittouu(str(radius) + "cm")
             r2 = r1 - thickness_px
 
+            #piece = DomePiece(key, angle, r1, thickness_px)
+            #piece.set_start_loc(cx, cy)
+
             # Start (x, y) also the end point
             sx = cx + r1
             sy = cy
@@ -203,10 +115,9 @@ class DomePatternPath(DomePattern):
             path = Path()
             path.M(sx, sy)
 
-            # FIXME: The large-arc-flag and the sweep-flag need to toggled
+            # NOTE: The large-arc-flag and the sweep-flag need to toggled
             # according to the radians turned. This should be calculated here
             # before any 'A' function calles are made.
-            inkex.debug(angle)
             if angle <= pi:
                 laf = 0
                 sf = 1
@@ -228,9 +139,8 @@ class DomePatternPath(DomePattern):
             path.L(sx, sy)
             path.Z()
 
-            #sattr['d'] = path.to_d_string()
             sattr['d'] = formatPath(path)
-            sattr['id'] = 'segment_path' + str(i) + str(randint(1, 50000))
+            sattr['id'] = 'dome_piece_path' + str(i) + str(randint(1, 50000))
 
             inkex.etree.SubElement(grp, inkex.addNS('path', 'svg'), sattr)
 
@@ -246,12 +156,15 @@ class DomePatternPath(DomePattern):
                                             inkex.addNS('textPath', 'svg'))
             textpath.set(inkex.addNS('href', 'xlink'), "#" + nid)
             textpath.set('startOffset', str(25 / seg) + "%")
-            textpath.text = "S:%i-[Rcm:%.1f,Sg:,%i,Se:%i, Th:%.2f]" % \
-                                            (i, o.radius, seg, seams, thickness)
+
+            s = "S:%i-[Rcm:%.1f,Sg:,%i,Se:%i, Th:%.2f]"
+            s = s % (i, o.radius, seg, seams, thickness)
+            textpath.text = s
+
             # append it to the main group
             grp.append(text)
 
 
-d = DomePatternPath()
+d = Domepat()
 d.affect()
 
