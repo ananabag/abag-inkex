@@ -94,7 +94,7 @@ def ellipse((rx, ry), (cx, cy), parent, style=False, startEnd=(0, 2 * math.pi)):
     return inkex.etree.SubElement(parent, inkex.addNS('path', 'svg'), attrs)
 
 
-def ellipseId((rx, ry), (cx, cy), parent, nid, startEnd=(0, 2 * math.pi),
+def ellipse_id((rx, ry), (cx, cy), parent, nid, startEnd=(0, 2 * math.pi),
                                                                 style=False):
     # add in an id variable to the attributs so I can pass it to the text
     # to put it along the path
@@ -116,8 +116,6 @@ def ellipseId((rx, ry), (cx, cy), parent, nid, startEnd=(0, 2 * math.pi),
         'transform': ''
     }
     return inkex.etree.SubElement(parent, inkex.addNS('path', 'svg'), attrs)
-
-ellipse_id = ellipseId
 
 
 def line((x1, y1), (x2, y2), name, parent, style):
@@ -164,6 +162,8 @@ def make_segment_data(radius, segments):
         angle_t = c / seg_r
         data[i] = (angle_t, seg_r)
     return data, thickness
+
+make_dome_data = make_segment_data
 
 
 class Vector2(object):
@@ -663,9 +663,8 @@ class Piece(object):
     def svg_id(self):
         ret = self.label
         if ret == '':
-            ret =  'piece_'
+            ret = 'piece_'
         return ret + str(randint(1, 50000))
-
 
     # TODO: Made this into a property with getters and setters
     def set_start_loc(self, x, y):
@@ -710,23 +709,10 @@ class DomePiece(Piece):
         sx = cx + r1
         sy = cy
 
+        laf, sf, laf2, sf2 = self.get_arch_flags(angle)
+
         p = Path()
         p.M(sx, sy)
-
-        # FIXME: The large-arc-flag and the sweep-flag need to toggled
-        # according to the radians turned. This should be calculated here
-        # before any 'A' function calles are made.
-        #inkex.debug(angle)
-        if angle <= pi:
-            laf = 0
-            sf = 1
-            laf2 = 0
-            sf2 = 0
-        else:
-            laf = 1
-            sf = 1
-            laf2 = 1
-            sf2 = 0
 
         x, y = point_on_circle(r1, angle)
         p.A(r1, r1, 0, laf, sf, cx + x, cy + y)
@@ -739,253 +725,3 @@ class DomePiece(Piece):
         p.Z()
 
         self._path = p
-
-
-class RectanglePiece(Piece):
-    """
-    The RectanglePiece class. The main aim of this class is to make drawing and
-    rendering svg rectangles easy
-    """
-    def __init__(self, width, height, label='', name=''):
-        Piece.__init__(self, label, name)
-        self.width = width
-        self.height = height
-        self.start_loc = (0, 0)
-        self.seams = False
-
-        # set the path data
-        self.path_data = (
-            (self.width, 0.0),
-            (0.0, self.height),
-            (-self.width, 0.0),
-            (0.0, -self.height)
-        )
-
-    def get_svgd(self):
-        """
-        @return Tuple Returns a Tuple suitable for use in an SVG 'd' path string
-        """
-        d = "m%f, %f " % self.start_loc
-        for i in self.path_data:
-            d += "%f, %f " % i
-        d += "z"
-        return d
-
-    def get_seams_svgd(self):
-        """
-        @return String Returns a string suitable for use as an SVG 'd' path
-        but with adjustments for seams
-        """
-        if not self.seams:
-            raise RuntimeError('Seams are not set yet')
-
-        width = self.width + self.right + self.left
-        height = self.height + self.top + self.bottom
-        sx, sy = self.start_loc
-        data = (
-            (width, 0.0),
-            (0.0, height),
-            (-width, 0.0),
-            (0.0, -height)
-        )
-        d = "m%f, %f " % (sx - self.left, sy - self.top)
-        for i in data:
-            d += "%f, %f " % i
-        d += "z"
-        return d
-
-    def get_all_svgd(self):
-        if self.seams:
-            return (self.get_svgd(), self.get_seams_svgd())
-        else:
-            return (self.get_svgd())
-
-    def get_seam_offset(self, sx, sy):
-        return (sx - self.left, sy - self.top)
-
-    def scale(self, x, y=False):
-        """
-        Scale the dimensions by the factor
-        """
-        if y is False:
-            y = x
-        self.width *= x
-        self.height *= y
-
-    def set_seams(self, top, right=0, bottom=0, left=0):
-        self.seams = True
-        self.top = top
-        self.bottom = bottom
-        self.right = right
-        self.left = left
-
-    def set_all_seams(self, value):
-        self.seams = True
-        self.top = value
-        self.right = value
-        self.bottom = value
-        self.left = value
-
-    def get_width(self):
-        return self.width
-
-    def set_width(self, w):
-        self.width = w
-
-    def get_height(self):
-        return self.height
-
-    def set_height(self, h):
-        self.height = h
-
-    def get_start_loc(self):
-        return self.start_loc
-
-    def set_start_loc(self, x, y):
-        self.start_loc = (x, y)
-
-
-class Dome(object):
-    """
-    Class to hold all segments and the information to generate the dome
-    """
-    def __init__(self, radius, segments, innerSeam, outerSeam, endSeam):
-        self.r = radius
-        self.segs = segments
-        self.inseam = innerSeam
-        self.outseam = outerSeam
-        self.endseam = endSeam
-        self.segment = {}
-
-
-class DomeSegment(object):
-    """
-    Class to hold all information needed to draw a dome segment. Including a few
-    helper methods to render seam allowences and stuff
-    """
-    def __init__(self, segNumber, angle, segRadius, thickness):
-        self.segNumber = segNumber
-        self.angle = angle
-        # this is for the outer radius
-        self.radiusOuter = segRadius
-        self.thickness = thickness
-
-        # set some of the other variables for calculation
-        self.radiusInner = segRadius - thickness
-        self.angleD = math.degrees(angle)
-        self.pcx = 0
-        self.pcy = 0
-
-    @staticmethod
-    def point_on_circle(radius, angle):
-        x = radius * math.cos(angle)
-        y = radius * math.sin(angle)
-        return (x, y)
-
-    def __get_cap(self, angle):
-        return self.__get_raw_cap(angle, self.radiusInner, self.radiusOuter)
-
-    def __get_raw_cap(self, angle, rin, rout):
-        x1, y1 = self.point_on_circle(rin, angle)
-        x1 = self.pcx + x1
-        y1 = self.pcy + y1
-        x2, y2 = self.point_on_circle(rout, angle)
-        x2 = self.pcx + x2
-        y2 = self.pcy + y2
-        return ((x1, y1), (x2, y2))
-
-    def get_inner_arch(self):
-        return (self.radiusInner, 0, self.angle)
-
-    def get_outer_arch(self):
-        return (self.radiusOuter, 0, self.angle)
-
-    def get_text_arch(self):
-        radius = self.radiusOuter - (self.thickness / 3)
-        return (radius, 0, self.angle)
-
-    def get_inner_seam_arch(self):
-        radius = self.radiusInner - self.inseam
-        return (radius, 0, self.angle)
-
-    def get_outer_seam_arch(self):
-        radius = self.radiusOuter + self.outseam
-        return (radius, 0, self.angle)
-
-    def get_end_seam_cap(self):
-        # get the full end cap
-        rin = self.radiusInner - self.inseam
-        rout = self.radiusOuter + self.outseam
-        p1, p2 = self.__get_raw_cap(self.angle, rin, rout)
-
-        # create a vecotr from points
-        v = Vector2.from_points(p1, p2)
-        # get perpendicular from is
-        perp = v.perpendicular()
-        perp.set_length(self.endseam)
-        px = perp.get_x()
-        py = perp.get_y()
-
-        # get extra points
-        p3 = (p1[0] + px, p1[1] + py)
-        p4 = (p2[0] + px, p2[1] + py)
-
-        # create the d path
-        svgd = 'M%.8f, %.8f' % p2
-        svgd += 'L%.8f, %.8f' % p4
-        svgd += 'L%.8f, %.8f' % p3
-        svgd += 'L%.8f, %.8f' % p1
-
-        return svgd
-
-    def get_start_seam_cap(self):
-        # get the full end cap
-        rin = self.radiusInner - self.inseam
-        rout = self.radiusOuter + self.outseam
-        p1, p2 = self.__get_raw_cap(0, rin, rout)
-
-        # create a vecotr from points
-        v = Vector2.from_points(p1, p2)
-        # get perpendicular from is
-        perp = v.perpendicular()
-        perp.set_length(self.endseam)
-        px = perp.get_x()
-        py = perp.get_y()
-
-        # get extra points
-        p3 = (p1[0] - px, p1[1] - py)
-        p4 = (p2[0] - px, p2[1] - py)
-
-        # create the d path
-        svgd = 'M%.8f, %.8f' % p2
-        svgd += 'L%.8f, %.8f' % p4
-        svgd += 'L%.8f, %.8f' % p3
-        svgd += 'L%.8f, %.8f' % p1
-
-        return svgd
-
-    def get_start_cap(self):
-        return self.__get_cap(0)
-
-    def get_end_cap(self):
-        return self.__get_cap(self.angle)
-
-    def set_all_seams(self, inner, outer, end):
-        self.inseam = inner
-        self.outseam = outer
-        self.endseam = end
-
-    def set_inner_seam(self, s):
-        self.inseam = s
-
-    def set_outer_seam(self, s):
-        self.outseam = s
-
-    def set_end_seam(self, s):
-        self.endseam = s
-
-    def setPageCenter(self, x, y):
-        self.pcx = x
-        self.pcy = y
-
-
