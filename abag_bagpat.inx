@@ -26,13 +26,13 @@
                 <param name="seamAllowenceInner" type="float" min="0.0" max="10.0" _gui-text="Seam allowence for inner radius (cm)">1.0</param>
                 <param name="seamAllowenceEnd" type="float" min="0.0" max="10.0" _gui-text="Seam allowence for the ends of each segment (cm)">1.0</param>
                 <param name="seamAllowenceOuter" type="float" min="0.0" max="10.0" _gui-text="Seam allowence for onter radius (cm)">1.0</param>
-                <param name="seamAllowenceOther" type="float" min="0.0" max="10.0" _gui-text="Seam allowence for zipper pieces">1.0</param>       
+                <param name="seamAllowenceOther" type="float" min="0.0" max="10.0" _gui-text="Seam allowence for zipper pieces">1.0</param>
         </page>
             <page name="render" _gui-text="Render">
-            <param name="topCone" type="boolean" _gui-text="Render the top cone as a circle">0</param>
+<!--            <param name="topCone" type="boolean" _gui-text="Render the top cone as a circle">0</param>-->
                 <param name="onlyRender" type="boolean" _gui-text="Render only some segemnts">0</param>
                 <param name="renderSegmentsFrom" type="int" min="1" max="20" _gui-text="Render segments from:">1</param>
-                <param name="renderSegmentsTo" type="int" min="1" max="20" _gui-text="Render segments to:">1</param>        
+                <param name="renderSegmentsTo" type="int" min="1" max="20" _gui-text="Render segments to:">1</param>
             </page>
     </param>
     <effect>
