@@ -22,7 +22,7 @@ Copy the following files into your Inkscape extensions directory.
 * abag_bagpat.py
 * abag_bagpat.inx
 
-Deepending on your OS the appropriated locations are:
+Deepending on your OS the appropriated locations are:
 
 * Linux: ~/.config/inkscape/extensions
 * Mac OSX: /Applications/Inkscape.app/Contents/Resources/extensions/
